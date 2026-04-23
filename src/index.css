@@ -1,45 +1,41 @@
 @import "tailwindcss";
 
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
 /* ─────────────────────────────────────────
  * Tape Deck — Global Styles
  * 감성 다크 톤 + 빈티지 카세트 무드
  * ───────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
-
 :root {
   /* Surface — 어두운 우드/가죽 케이스 톤 */
-  --tape-bg-deepest: #0d0a08; /* 가장 깊은 배경 */
-  --tape-bg-base: #15110d; /* 기본 배경 */
-  --tape-bg-elevated: #1f1a14; /* 카드/패널 */
-  --tape-bg-raised: #2a221a; /* 호버/강조 */
+  --tape-bg-deepest: #0d0a08;
+  --tape-bg-base: #15110d;
+  --tape-bg-elevated: #1f1a14;
+  --tape-bg-raised: #2a221a;
 
   /* Text — 빛바랜 종이 톤 */
-  --tape-text-primary: #f5ead5; /* 메인 텍스트 (크림) */
-  --tape-text-secondary: #c9b896; /* 보조 텍스트 (세피아) */
-  --tape-text-muted: #7a6c54; /* 흐린 텍스트 */
+  --tape-text-primary: #f5ead5;
+  --tape-text-secondary: #c9b896;
+  --tape-text-muted: #7a6c54;
 
   /* Accent — 빈티지 + 사용자 시그니처 */
-  --tape-accent-blue: #8fb8d9; /* 파스텔 블루 (시그니처) */
-  --tape-accent-amber: #d4a574; /* 빈티지 앰버 */
-  --tape-accent-rust: #c97a5e; /* 녹슨 빨강 */
-  --tape-accent-moss: #8a9a6b; /* 빈티지 그린 */
+  --tape-accent-blue: #8fb8d9;
+  --tape-accent-amber: #d4a574;
+  --tape-accent-rust: #c97a5e;
+  --tape-accent-moss: #8a9a6b;
 
   /* Functional */
   --tape-border: #3a2f24;
   --tape-shadow: rgba(0, 0, 0, 0.4);
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 html,
 body,
 #root {
   height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
@@ -47,24 +43,28 @@ body {
     "Inter",
     -apple-system,
     BlinkMacSystemFont,
+    "Segoe UI",
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji",
     sans-serif;
   background-color: var(--tape-bg-deepest);
   color: var(--tape-text-primary);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* 미세한 그레인 텍스처를 CSS로 (감성 디테일) */
   background-image:
     radial-gradient(at 20% 30%, rgba(212, 165, 116, 0.04) 0%, transparent 50%),
     radial-gradient(at 80% 70%, rgba(143, 184, 217, 0.03) 0%, transparent 50%);
 }
 
-/* 빈티지 세리프 — 테이프 레이블, 헤딩에 사용 */
+/* 빈티지 세리프 — 테이프 레이블, 헤딩 */
 .font-serif {
   font-family: "DM Serif Display", Georgia, serif;
 }
 
-/* 모노 — 곡 길이, 카운터 등 */
+/* 모노 — 곡 길이, 카운터 */
 .font-mono {
   font-family: "JetBrains Mono", "Fira Code", monospace;
 }
@@ -85,31 +85,7 @@ body {
   background: var(--tape-text-muted);
 }
 
-/* 선택 영역 */
 ::selection {
   background: var(--tape-accent-blue);
   color: var(--tape-bg-deepest);
-}
-
-/* 버튼 기본 리셋 */
-button {
-  font-family: inherit;
-  cursor: pointer;
-  background: none;
-  border: none;
-  color: inherit;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-/* 링크 기본 */
-a {
-  color: var(--tape-accent-blue);
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
 }
