@@ -10,49 +10,6 @@ import { useReelRotation } from "../hooks/useReelRotation";
 export default function CollectionPage() {
   const tapes = useTapes(); // undefined → loading, [] → empty, [...] → 데이터
 
-  // ── 디버그용: 샘플 테이프 하나 추가 (Step 11에서 진짜 폼으로 교체)
-  const handleAddSample = async () => {
-    const palette = [
-      { bg: "#8fb8d9", acc: "#d4a574", emoji: "🌊" },
-      { bg: "#c97a5e", acc: "#f5ead5", emoji: "🌅" },
-      { bg: "#8a9a6b", acc: "#2a221a", emoji: "🌿" },
-      { bg: "#d4a574", acc: "#15110d", emoji: "☕" },
-    ];
-    const p = palette[Math.floor(Math.random() * palette.length)];
-    const titles = [
-      "운전할 때 듣는 노래",
-      "늦은 새벽의 카페",
-      "첫눈 오는 날",
-      "여름 휴가 BGM",
-      "비 오는 일요일 오후",
-    ];
-    const tape = createBlankTape({
-      title: titles[Math.floor(Math.random() * titles.length)],
-      artist: "2A’s Mixtape",
-      cover: {
-        bgColor: p.bg,
-        accentColor: p.acc,
-        emoji: p.emoji,
-        pattern: "solid",
-      },
-      sideA: [
-        createTrack({
-          videoId: "dQw4w9WgXcQ",
-          title: "Sample Track A1",
-          duration: 213,
-        }),
-      ],
-      sideB: [
-        createTrack({
-          videoId: "M7lc1UVf-VE",
-          title: "Sample Track B1",
-          duration: 200,
-        }),
-      ],
-    });
-    await addTape(tape);
-  };
-
   // 로딩 상태
   if (tapes === undefined) {
     return (
@@ -84,19 +41,6 @@ export default function CollectionPage() {
               : `선반에 ${tapes.length}개의 테이프.`}
           </p>
         </div>
-
-        {/* 디버그용 — Step 11에서 제거 */}
-        <button
-          onClick={handleAddSample}
-          className="px-3 py-2 rounded-md text-xs font-mono border transition-opacity hover:opacity-80"
-          style={{
-            borderColor: "var(--tape-border)",
-            color: "var(--tape-text-muted)",
-            backgroundColor: "var(--tape-bg-elevated)",
-          }}
-        >
-          + sample
-        </button>
       </div>
 
       {/* 빈 상태 */}
@@ -106,7 +50,7 @@ export default function CollectionPage() {
         className="mt-8 text-xs font-mono"
         style={{ color: "var(--tape-text-muted)" }}
       >
-        // TODO Step 12: 미니어처 카세트 카드 + 검색/정렬
+        // TODO Step 12: 선반 UI 업그레이드 + 검색/정렬
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ROUTES } from "../constants/routes";
+import { ROUTES, buildRoute } from "../constants/routes";
 import { useTape } from "../hooks/useTapes";
 import { useYouTubePlayer } from "../hooks/useYouTubePlayer";
 import { useReelRotation } from "../hooks/useReelRotation";
@@ -127,13 +127,26 @@ export default function PlayerPage() {
 
   return (
     <div>
-      <Link
-        to={ROUTES.COLLECTION}
-        className="inline-block mb-6 text-sm"
-        style={{ color: "var(--tape-text-secondary)" }}
-      >
-        ← 컬렉션으로
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          to={ROUTES.COLLECTION}
+          className="text-sm"
+          style={{ color: "var(--tape-text-secondary)" }}
+        >
+          ← 컬렉션으로
+        </Link>
+        <Link
+          to={buildRoute.edit(tapeId)}
+          className="text-sm px-3 py-1 rounded-md border transition-colors hover:opacity-80"
+          style={{
+            color: "var(--tape-text-secondary)",
+            borderColor: "var(--tape-border)",
+            textDecoration: "none",
+          }}
+        >
+          ✎ 편집
+        </Link>
+      </div>
 
       {/* ── 카세트 본체 (애니메이션 가능) ── */}
       <div
