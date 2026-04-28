@@ -6,6 +6,7 @@ export const ROUTES = {
   CREATE: "/create",
   PLAY: "/play/:tapeId",
   EDIT: "/edit/:tapeId",
+  SETTINGS: "/settings",
 };
 
 export const buildRoute = {

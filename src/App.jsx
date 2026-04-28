@@ -4,6 +4,7 @@ import CollectionPage from "./pages/CollectionPage";
 import PlayerPage from "./pages/PlayerPage";
 import CreatePage from "./pages/CreatePage";
 import EditPage from "./pages/EditPage";
+import SettingsPage from "./pages/SettingsPage";
 import { ROUTES } from "./constants/routes";
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path={ROUTES.CREATE} element={<CreatePage />} />
           <Route path={ROUTES.PLAY} element={<PlayerPage />} />
           <Route path={ROUTES.EDIT} element={<EditPage />} />
+          <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
           <Route path="*" element={<CollectionPage />} />
         </Routes>
       </Layout>

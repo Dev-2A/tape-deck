@@ -43,6 +43,18 @@ export default function Header() {
             active={isCreate}
             highlight
           />
+          <Link
+            to={ROUTES.SETTINGS}
+            className="ml-1 px-2 py-2 rounded-md text-sm transition-opacity hover:opacity-80"
+            style={{
+              color: "var(--tape-text-secondary)",
+              textDecoration: "none",
+            }}
+            aria-label="설정"
+            title="설정"
+          >
+            ⚙️
+          </Link>
         </nav>
       </div>
     </header>
