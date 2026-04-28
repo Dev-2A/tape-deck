@@ -89,3 +89,38 @@ body {
   background: var(--tape-accent-blue);
   color: var(--tape-bg-deepest);
 }
+
+/* ─────────────────────────────────────────
+ * Cassette tape — playing animations
+ * ───────────────────────────────────────── */
+
+/* 재생 중 — CassetteSVG.playing 신호용 클래스 (현재는 시각 효과 없음) */
+.tape-playing {
+  /* 본체 진동을 빼고 릴 회전과 스트리밍에만 의존 */
+}
+
+/* 테이프 띠 위에 흐르는 라인 — 좌→우 */
+@keyframes tape-streaming {
+  0% {
+    transform: translateX(0);
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(-30px);
+    opacity: 0.4;
+  }
+}
+
+.tape-streaming {
+  animation: tape-streaming 1.2s linear infinite;
+}
+
+/* 사용자가 모션 줄임 설정을 켰으면 애니메이션 끔 (접근성) */
+@media (prefers-reduced-motion: reduce) {
+  .tape-streaming {
+    animation: none !important;
+  }
+}

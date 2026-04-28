@@ -5,6 +5,7 @@ import { useTape } from "../hooks/useTapes";
 import { useYouTubePlayer } from "../hooks/useYouTubePlayer";
 import { incrementPlayCount } from "../db/tapeRepository";
 import CassetteSVG from "../components/tape/CassetteSVG";
+import { useReelRotation } from "../hooks/useReelRotation";
 
 export default function PlayerPage() {
   const { tapeId } = useParams();
@@ -26,6 +27,9 @@ export default function PlayerPage() {
       if (trackIndex < tracks.length - 1) setTrackIndex((i) => i + 1);
     },
   });
+
+  // 재생 상태에 따라 릴 회전 각도
+  const reelRotation = useReelRotation(player.state === "playing", 90);
 
   // 첫 재생 시 playCount 증가
   useEffect(() => {
@@ -90,7 +94,8 @@ export default function PlayerPage() {
           title={tape.title}
           artist={tape.artist}
           side={side}
-          reelRotation={0}
+          reelRotation={reelRotation}
+          playing={player.state === "playing"}
         />
       </div>
 
@@ -257,9 +262,7 @@ export default function PlayerPage() {
       <p
         className="mt-8 text-xs font-mono text-center"
         style={{ color: "var(--tape-text-muted)" }}
-      >
-        // TODO Step 7: 재생 중 릴이 회전하는 애니메이션
-      </p>
+      ></p>
     </div>
   );
 }

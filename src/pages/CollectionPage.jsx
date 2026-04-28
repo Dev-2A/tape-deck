@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ROUTES, buildRoute } from "../constants/routes";
 import { useTapes } from "../hooks/useTapes";
 import { addTape, createBlankTape, deleteTape } from "../db/tapeRepository";
 import { createTrack } from "../db/trackHelpers";
 import CassetteSVG from "../components/tape/CassetteSVG";
+import { useReelRotation } from "../hooks/useReelRotation";
 
 export default function CollectionPage() {
   const tapes = useTapes(); // undefined → loading, [] → empty, [...] → 데이터
@@ -165,6 +167,9 @@ function TapeGrid({ tapes }) {
  */
 function TapeCardPlaceholder({ tape }) {
   const totalTracks = (tape.sideA?.length || 0) + (tape.sideB?.length || 0);
+  const [hovered, setHovered] = useState(false);
+  // 호버 중일 때만 천천히 회전 (45 deg/s — 본 재생보다 느림)
+  const reelRotation = useReelRotation(hovered, 45);
 
   const handleDelete = async (e) => {
     e.preventDefault();
@@ -177,11 +182,19 @@ function TapeCardPlaceholder({ tape }) {
   return (
     <Link
       to={buildRoute.play(tape.id)}
-      className="block rounded-xl p-3 transition-all duration-200 hover:scale-[1.03] group relative"
+      className="block rounded-xl p-3 transition-all duration-300 ease-out group relative"
       style={{
         backgroundColor: "var(--tape-bg-elevated)",
         textDecoration: "none",
+        transform: hovered
+          ? "translateY(-8px) scale(1.02)"
+          : "translateY(0) scale(1)",
+        boxShadow: hovered
+          ? "0 16px 32px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.3)"
+          : "0 2px 6px rgba(0, 0, 0, 0.2)",
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* 미니 카세트 SVG */}
       <CassetteSVG
@@ -189,6 +202,8 @@ function TapeCardPlaceholder({ tape }) {
         title={tape.title}
         artist={tape.artist}
         side="A"
+        reelRotation={reelRotation}
+        playing={hovered}
       />
 
       {/* 메타 (카세트 아래) */}

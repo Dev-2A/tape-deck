@@ -12,6 +12,7 @@ export default function CassetteSVG({
   artist = "",
   side = "A",
   reelRotation = 0,
+  playing = false,
   className = "",
   style = {},
 }) {
@@ -46,7 +47,7 @@ export default function CassetteSVG({
     <svg
       viewBox="0 0 800 500"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`${playing ? "tape-playing" : ""} ${className}`}
       style={{
         width: "100%",
         height: "auto",
@@ -261,6 +262,51 @@ export default function CassetteSVG({
         fill="#7a4f2c"
         opacity="0.7"
       />
+      {/* 재생 중 — 띠 위에 흐르는 미세한 라인 (속도감) */}
+      {playing && (
+        <g className="tape-streaming" opacity="0.5">
+          <line
+            x1="240"
+            y1="330"
+            x2="260"
+            y2="330"
+            stroke="#a87a4f"
+            strokeWidth="1.5"
+          />
+          <line
+            x1="300"
+            y1="330"
+            x2="330"
+            y2="330"
+            stroke="#a87a4f"
+            strokeWidth="1.5"
+          />
+          <line
+            x1="380"
+            y1="330"
+            x2="395"
+            y2="330"
+            stroke="#a87a4f"
+            strokeWidth="1.5"
+          />
+          <line
+            x1="440"
+            y1="330"
+            x2="475"
+            y2="330"
+            stroke="#a87a4f"
+            strokeWidth="1.5"
+          />
+          <line
+            x1="510"
+            y1="330"
+            x2="530"
+            y2="330"
+            stroke="#a87a4f"
+            strokeWidth="1.5"
+          />
+        </g>
+      )}
 
       {/* 두 릴 */}
       <Reel cx={280} cy={330} rotation={reelRotation} accent={accentColor} />
