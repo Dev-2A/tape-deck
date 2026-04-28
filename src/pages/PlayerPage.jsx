@@ -4,37 +4,30 @@ import { ROUTES } from "../constants/routes";
 import { useTape } from "../hooks/useTapes";
 import { useYouTubePlayer } from "../hooks/useYouTubePlayer";
 import { incrementPlayCount } from "../db/tapeRepository";
+import CassetteSVG from "../components/tape/CassetteSVG";
 
 export default function PlayerPage() {
   const { tapeId } = useParams();
   const navigate = useNavigate();
   const tape = useTape(tapeId);
 
-  // A/B면 + 트랙 인덱스
-  const [side, setSide] = useState("A"); // 'A' | 'B'
+  const [side, setSide] = useState("A");
   const [trackIndex, setTrackIndex] = useState(0);
   const incrementedRef = useRef(false);
 
-  // 현재 면의 트랙 리스트
   const tracks = tape ? (side === "A" ? tape.sideA : tape.sideB) : [];
   const currentTrack = tracks[trackIndex] || null;
 
-  // YouTube 플레이어
   const containerRef = useRef(null);
   const player = useYouTubePlayer(containerRef, {
     videoId: currentTrack?.videoId || null,
     initialVolume: 70,
     onEnded: () => {
-      // 마지막 곡이 아니면 다음으로
-      if (trackIndex < tracks.length - 1) {
-        setTrackIndex((i) => i + 1);
-      } else {
-        // 같은 면 끝 — 일단 정지 (Step 9에서 자동 B면 전환 옵션 추가)
-      }
+      if (trackIndex < tracks.length - 1) setTrackIndex((i) => i + 1);
     },
   });
 
-  // 처음 재생되는 순간 playCount 1 증가
+  // 첫 재생 시 playCount 증가
   useEffect(() => {
     if (player.state === "playing" && !incrementedRef.current && tapeId) {
       incrementPlayCount(tapeId);
@@ -42,7 +35,7 @@ export default function PlayerPage() {
     }
   }, [player.state, tapeId]);
 
-  // 면을 바꾸면 첫 곡으로
+  // 면 전환 시 첫 곡으로
   useEffect(() => {
     setTrackIndex(0);
   }, [side]);
@@ -60,7 +53,7 @@ export default function PlayerPage() {
   }
 
   // 없는 테이프
-  if (tape === null || !tape) {
+  if (!tape) {
     return (
       <div className="text-center py-20">
         <p className="mb-4" style={{ color: "var(--tape-text-secondary)" }}>
@@ -90,29 +83,19 @@ export default function PlayerPage() {
         ← 컬렉션으로
       </Link>
 
-      {/* 헤더 */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-3xl">{tape.cover?.emoji || "📼"}</span>
-          <h1
-            className="font-serif text-3xl md:text-4xl"
-            style={{ color: "var(--tape-text-primary)" }}
-          >
-            {tape.title}
-          </h1>
-        </div>
-        {tape.artist && (
-          <p
-            className="italic ml-12"
-            style={{ color: "var(--tape-text-secondary)" }}
-          >
-            — {tape.artist}
-          </p>
-        )}
+      {/* 카세트 본체 — 메인 비주얼 */}
+      <div className="max-w-3xl mx-auto mb-8">
+        <CassetteSVG
+          cover={tape.cover}
+          title={tape.title}
+          artist={tape.artist}
+          side={side}
+          reelRotation={0}
+        />
       </div>
 
       {/* A/B면 토글 */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex justify-center gap-2 mb-8">
         <SideButton
           label="A면"
           active={side === "A"}
@@ -125,34 +108,25 @@ export default function PlayerPage() {
         />
       </div>
 
-      {/* YouTube IFrame 컨테이너 — Step 6에서 카세트 뒤로 숨길 예정 */}
+      {/* YouTube IFrame — 화면 밖에 숨김 (오디오만 재생) */}
       <div
-        className="rounded-lg overflow-hidden mb-6 relative"
+        aria-hidden="true"
         style={{
-          backgroundColor: 'var(--tape-bg-base)',
-          border: '1px solid var(--tape-border)',
-          aspectRatio: '16 / 9',
+          position: "absolute",
+          left: "-9999px",
+          top: "-9999px",
+          width: "320px",
+          height: "180px",
+          pointerEvents: "none",
         }}
       >
-        {/* ref는 항상 존재 — 트랙이 없을 때는 placeholder가 위에 덮어씀 */}
         <div ref={containerRef} className="w-full h-full" />
-        {!currentTrack && (
-          <div
-            className="absolute inset-0 flex items-center justify-center text-sm"
-            style={{
-              color: 'var(--tape-text-muted)',
-              backgroundColor: 'var(--tape-bg-base)',
-            }}
-          >
-            이 면에는 트랙이 없어요.
-          </div>
-        )}
       </div>
 
       {/* 컨트롤 + 트랙 정보 */}
-      {currentTrack && (
+      {currentTrack ? (
         <div
-          className="rounded-lg p-5 border"
+          className="rounded-lg p-5 border max-w-3xl mx-auto"
           style={{
             backgroundColor: "var(--tape-bg-elevated)",
             borderColor: "var(--tape-border)",
@@ -230,19 +204,19 @@ export default function PlayerPage() {
               {player.volume}
             </span>
           </div>
-
-          <p
-            className="text-xs font-mono mt-3"
-            style={{ color: "var(--tape-text-muted)" }}
-          >
-            state: {player.state || "..."} · ready: {String(player.isReady)}
-          </p>
         </div>
+      ) : (
+        <p
+          className="text-center text-sm py-8"
+          style={{ color: "var(--tape-text-muted)" }}
+        >
+          {side}면에는 트랙이 없어요.
+        </p>
       )}
 
-      {/* 트랙 목록 (현재 면) */}
+      {/* 트랙 목록 */}
       {tracks.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-6 max-w-3xl mx-auto">
           <h2
             className="text-sm font-mono mb-3"
             style={{ color: "var(--tape-text-muted)" }}
@@ -281,10 +255,10 @@ export default function PlayerPage() {
       )}
 
       <p
-        className="mt-8 text-xs font-mono"
+        className="mt-8 text-xs font-mono text-center"
         style={{ color: "var(--tape-text-muted)" }}
       >
-        // TODO Step 6~9: 카세트테이프 SVG로 IFrame 가리기 + 회전 릴 + 노브 볼륨
+        // TODO Step 7: 재생 중 릴이 회전하는 애니메이션
       </p>
     </div>
   );

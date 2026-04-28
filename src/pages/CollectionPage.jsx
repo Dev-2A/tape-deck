@@ -3,6 +3,7 @@ import { ROUTES, buildRoute } from "../constants/routes";
 import { useTapes } from "../hooks/useTapes";
 import { addTape, createBlankTape, deleteTape } from "../db/tapeRepository";
 import { createTrack } from "../db/trackHelpers";
+import CassetteSVG from "../components/tape/CassetteSVG";
 
 export default function CollectionPage() {
   const tapes = useTapes(); // undefined → loading, [] → empty, [...] → 데이터
@@ -176,60 +177,48 @@ function TapeCardPlaceholder({ tape }) {
   return (
     <Link
       to={buildRoute.play(tape.id)}
-      className="block rounded-lg p-5 border transition-all duration-200 hover:scale-[1.02] hover:shadow-xl group"
+      className="block rounded-xl p-3 transition-all duration-200 hover:scale-[1.03] group relative"
       style={{
-        backgroundColor: tape.cover?.bgColor || "var(--tape-bg-elevated)",
-        borderColor: "var(--tape-border)",
+        backgroundColor: "var(--tape-bg-elevated)",
         textDecoration: "none",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
       }}
     >
-      {/* 상단: 이모지 + 액션 */}
-      <div className="flex items-start justify-between mb-6">
-        <div className="text-4xl">{tape.cover?.emoji || "📼"}</div>
-        <button
-          onClick={handleDelete}
-          className="text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{
-            backgroundColor: "rgba(0,0,0,0.3)",
-            color: "var(--tape-text-primary)",
-          }}
+      {/* 미니 카세트 SVG */}
+      <CassetteSVG
+        cover={tape.cover}
+        title={tape.title}
+        artist={tape.artist}
+        side="A"
+      />
+
+      {/* 메타 (카세트 아래) */}
+      <div className="flex items-center justify-between mt-3 px-2">
+        <div
+          className="text-xs font-mono"
+          style={{ color: "var(--tape-text-muted)" }}
         >
-          삭제
-        </button>
+          ♪ {totalTracks} tracks
+        </div>
+        <div
+          className="text-xs font-mono"
+          style={{ color: "var(--tape-text-muted)" }}
+        >
+          ▶ {tape.playCount || 0}
+        </div>
       </div>
 
-      {/* 타이틀 */}
-      <h3
-        className="font-serif text-xl mb-1 line-clamp-2"
-        style={{ color: tape.cover?.accentColor || "var(--tape-text-primary)" }}
-      >
-        {tape.title}
-      </h3>
-      {tape.artist && (
-        <p
-          className="text-sm mb-4 italic"
-          style={{
-            color: tape.cover?.accentColor || "var(--tape-text-secondary)",
-            opacity: 0.85,
-          }}
-        >
-          — {tape.artist}
-        </p>
-      )}
-
-      {/* 메타 */}
-      <div
-        className="flex items-center justify-between text-xs font-mono mt-4 pt-4 border-t"
+      {/* 호버 시 우상단 삭제 버튼 */}
+      <button
+        onClick={handleDelete}
+        className="absolute top-3 right-3 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
         style={{
-          color: tape.cover?.accentColor || "var(--tape-text-muted)",
-          borderColor: "rgba(0,0,0,0.15)",
-          opacity: 0.85,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          color: "var(--tape-text-primary)",
+          backdropFilter: "blur(4px)",
         }}
       >
-        <span>♪ {totalTracks} tracks</span>
-        <span>▶ {tape.playCount || 0}</span>
-      </div>
+        삭제
+      </button>
     </Link>
   );
 }
