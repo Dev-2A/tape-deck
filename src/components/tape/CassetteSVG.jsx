@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { readableOnDark } from "../../utils/colorHelpers";
 
 /**
  * 카세트테이프 SVG — 정지 상태의 미학적 디자인.
@@ -433,38 +434,4 @@ function Reel({ cx, cy, rotation = 0, accent }) {
 function truncate(s, max) {
   if (!s) return "";
   return s.length > max ? s.slice(0, max - 1) + "…" : s;
-}
-
-/**
- * HEX 색상의 인지 밝기(perceived luminance)를 계산.
- * 0(완전 검정) ~ 1(완전 흰색)
- *
- * 가중치: R 0.299, G 0.587, B 0.114 (ITU-R BT.601)
- * 인간 눈은 초록을 가장 밝게 인지하므로 단순 평균보다 정확함.
- */
-function getLuminance(hex) {
-  if (!hex || typeof hex !== "string") return 0;
-  const m = hex.replace("#", "");
-  // 3자리 단축 (#abc) → 6자리로 확장
-  const full =
-    m.length === 3
-      ? m
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : m;
-  if (full.length !== 6) return 0;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  return (r * 0.299 + g * 0.587 + b * 0.114) / 255;
-}
-
-/**
- * 어두운 배경 위에 올라갈 때 가독성 있는 텍스트 색을 반환.
- * - accent가 밝은 색(luminance > 0.5)이면 그대로
- * - 어두우면 빛바랜 크림색으로 교체
- */
-function readableOnDark(accentColor) {
-  return getLuminance(accentColor) > 0.5 ? accentColor : "#f5ead5";
 }
