@@ -6,6 +6,7 @@ import { useYouTubePlayer } from "../hooks/useYouTubePlayer";
 import { incrementPlayCount } from "../db/tapeRepository";
 import CassetteSVG from "../components/tape/CassetteSVG";
 import { useReelRotation } from "../hooks/useReelRotation";
+import VolumeKnob from "../components/tape/VolumeKnob";
 
 export default function PlayerPage() {
   const { tapeId } = useParams();
@@ -131,83 +132,73 @@ export default function PlayerPage() {
       {/* 컨트롤 + 트랙 정보 */}
       {currentTrack ? (
         <div
-          className="rounded-lg p-5 border max-w-3xl mx-auto"
+          className="rounded-lg p-6 border max-w-3xl mx-auto"
           style={{
             backgroundColor: "var(--tape-bg-elevated)",
             borderColor: "var(--tape-border)",
           }}
         >
-          <div className="mb-4">
-            <p
-              className="text-xs font-mono mb-1"
-              style={{ color: "var(--tape-text-muted)" }}
-            >
-              NOW PLAYING · {side}면 · {trackIndex + 1}/{tracks.length}
-            </p>
-            <p
-              className="font-medium"
-              style={{ color: "var(--tape-text-primary)" }}
-            >
-              {currentTrack.title || "(제목 없음)"}
-            </p>
-            <p
-              className="text-xs font-mono mt-1"
-              style={{ color: "var(--tape-text-muted)" }}
-            >
-              {formatTime(player.currentTime)} /{" "}
-              {formatTime(player.duration || currentTrack.duration)}
-            </p>
-          </div>
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* 좌측: 트랙 정보 + 재생 컨트롤 */}
+            <div className="flex-1 min-w-[260px]">
+              <p
+                className="text-xs font-mono mb-1"
+                style={{ color: "var(--tape-text-muted)" }}
+              >
+                NOW PLAYING · {side}면 · {trackIndex + 1}/{tracks.length}
+              </p>
+              <p
+                className="font-medium mb-1"
+                style={{ color: "var(--tape-text-primary)" }}
+              >
+                {currentTrack.title || "(제목 없음)"}
+              </p>
+              <p
+                className="text-xs font-mono mb-4"
+                style={{ color: "var(--tape-text-muted)" }}
+              >
+                {formatTime(player.currentTime)} /{" "}
+                {formatTime(player.duration || currentTrack.duration)}
+              </p>
 
-          <div className="flex items-center gap-2 mb-3">
-            <ControlButton
-              onClick={() => setTrackIndex((i) => Math.max(0, i - 1))}
-              disabled={trackIndex === 0}
-            >
-              ⏮
-            </ControlButton>
+              <div className="flex items-center gap-2 flex-wrap">
+                <ControlButton
+                  onClick={() => setTrackIndex((i) => Math.max(0, i - 1))}
+                  disabled={trackIndex === 0}
+                >
+                  ⏮
+                </ControlButton>
 
-            {player.state === "playing" ? (
-              <ControlButton onClick={player.pause} primary>
-                ⏸ 일시정지
-              </ControlButton>
-            ) : (
-              <ControlButton onClick={player.play} primary>
-                ▶ 재생
-              </ControlButton>
-            )}
+                {player.state === "playing" ? (
+                  <ControlButton onClick={player.pause} primary>
+                    ⏸ 일시정지
+                  </ControlButton>
+                ) : (
+                  <ControlButton onClick={player.play} primary>
+                    ▶ 재생
+                  </ControlButton>
+                )}
 
-            <ControlButton
-              onClick={() =>
-                setTrackIndex((i) => Math.min(tracks.length - 1, i + 1))
-              }
-              disabled={trackIndex >= tracks.length - 1}
-            >
-              ⏭
-            </ControlButton>
-          </div>
+                <ControlButton
+                  onClick={() =>
+                    setTrackIndex((i) => Math.min(tracks.length - 1, i + 1))
+                  }
+                  disabled={trackIndex >= tracks.length - 1}
+                >
+                  ⏭
+                </ControlButton>
+              </div>
+            </div>
 
-          <div className="flex items-center gap-3">
-            <span
-              className="text-xs font-mono"
-              style={{ color: "var(--tape-text-muted)" }}
-            >
-              VOL
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={player.volume}
-              onChange={(e) => player.setVolume(Number(e.target.value))}
-              className="flex-1"
-            />
-            <span
-              className="text-xs font-mono w-8 text-right"
-              style={{ color: "var(--tape-text-secondary)" }}
-            >
-              {player.volume}
-            </span>
+            {/* 우측: 볼륨 노브 */}
+            <div className="flex justify-center">
+              <VolumeKnob
+                value={player.volume}
+                onChange={(v) => player.setVolume(v)}
+                size={120}
+                label="VOLUME"
+              />
+            </div>
           </div>
         </div>
       ) : (
