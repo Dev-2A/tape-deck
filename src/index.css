@@ -124,3 +124,38 @@ body {
     animation: none !important;
   }
 }
+
+/* ─────────────────────────────────────────
+ * Cassette tape — side flip transition
+ * ───────────────────────────────────────── */
+
+@keyframes tape-side-flip {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotateY(0deg);
+  }
+  40% {
+    opacity: 0.4;
+    transform: scale(0.96) rotateY(-12deg);
+  }
+  60% {
+    opacity: 0.4;
+    transform: scale(0.96) rotateY(12deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateY(0deg);
+  }
+}
+
+.tape-flipping {
+  animation: tape-side-flip 0.42s ease-in-out;
+  transform-origin: center center;
+  perspective: 1000px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tape-flipping {
+    animation: none !important;
+  }
+}

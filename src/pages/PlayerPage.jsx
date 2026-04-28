@@ -3,10 +3,13 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
 import { useTape } from "../hooks/useTapes";
 import { useYouTubePlayer } from "../hooks/useYouTubePlayer";
+import { useReelRotation } from "../hooks/useReelRotation";
 import { incrementPlayCount } from "../db/tapeRepository";
 import CassetteSVG from "../components/tape/CassetteSVG";
-import { useReelRotation } from "../hooks/useReelRotation";
 import VolumeKnob from "../components/tape/VolumeKnob";
+import ProgressBar from "../components/tape/ProgressBar";
+import { formatTime } from "../utils/formatTime";
+import { REPEAT_LABELS, nextRepeatMode } from "../utils/repeatMode";
 
 export default function PlayerPage() {
   const { tapeId } = useParams();
@@ -15,21 +18,56 @@ export default function PlayerPage() {
 
   const [side, setSide] = useState("A");
   const [trackIndex, setTrackIndex] = useState(0);
+  const [autoFlip, setAutoFlip] = useState(false); // 면 끝 자동 전환
+  const [repeatMode, setRepeatMode] = useState("off"); // off | track | side
+  const [flipping, setFlipping] = useState(false); // 면 전환 애니메이션
   const incrementedRef = useRef(false);
 
   const tracks = tape ? (side === "A" ? tape.sideA : tape.sideB) : [];
   const currentTrack = tracks[trackIndex] || null;
 
   const containerRef = useRef(null);
+
+  // ── 곡이 끝났을 때 다음 동작 결정
+  const handleEnded = () => {
+    // 1) 한 곡 반복
+    if (repeatMode === "track") {
+      // 같은 트랙을 처음부터 다시
+      try {
+        if (currentTrack?.videoId) {
+          player.loadVideo(currentTrack.videoId, true); // autoplay=true
+        } else {
+          player.seekTo(0);
+          player.play();
+        }
+      } catch {}
+      return;
+    }
+    // 2) 다음 트랙
+    if (trackIndex < tracks.length - 1) {
+      setTrackIndex((i) => i + 1);
+      return;
+    }
+    // 3) 면 끝 도달
+    if (repeatMode === "side") {
+      // 같은 면 처음부터
+      setTrackIndex(0);
+      return;
+    }
+    if (autoFlip) {
+      // 자동으로 반대 면으로
+      flipToSide(side === "A" ? "B" : "A");
+      return;
+    }
+    // 4) 정지 (별도 동작 없음)
+  };
+
   const player = useYouTubePlayer(containerRef, {
     videoId: currentTrack?.videoId || null,
     initialVolume: 70,
-    onEnded: () => {
-      if (trackIndex < tracks.length - 1) setTrackIndex((i) => i + 1);
-    },
+    onEnded: handleEnded,
   });
 
-  // 재생 상태에 따라 릴 회전 각도
   const reelRotation = useReelRotation(player.state === "playing", 90);
 
   // 첫 재생 시 playCount 증가
@@ -45,6 +83,15 @@ export default function PlayerPage() {
     setTrackIndex(0);
   }, [side]);
 
+  // ── 면 전환 (애니메이션과 함께)
+  const flipToSide = (newSide) => {
+    if (newSide === side) return;
+    setFlipping(true);
+    // 애니메이션 절반(약 0.21s) 즈음에 side 변경 → 라벨이 바뀌는 타이밍이 자연스러움
+    setTimeout(() => setSide(newSide), 210);
+    setTimeout(() => setFlipping(false), 420);
+  };
+
   // 로딩
   if (tape === undefined) {
     return (
@@ -56,8 +103,6 @@ export default function PlayerPage() {
       </p>
     );
   }
-
-  // 없는 테이프
   if (!tape) {
     return (
       <div className="text-center py-20">
@@ -78,6 +123,8 @@ export default function PlayerPage() {
     );
   }
 
+  const repeat = REPEAT_LABELS[repeatMode];
+
   return (
     <div>
       <Link
@@ -88,8 +135,10 @@ export default function PlayerPage() {
         ← 컬렉션으로
       </Link>
 
-      {/* 카세트 본체 — 메인 비주얼 */}
-      <div className="max-w-3xl mx-auto mb-8">
+      {/* ── 카세트 본체 (애니메이션 가능) ── */}
+      <div
+        className={`max-w-3xl mx-auto mb-8 ${flipping ? "tape-flipping" : ""}`}
+      >
         <CassetteSVG
           cover={tape.cover}
           title={tape.title}
@@ -100,21 +149,60 @@ export default function PlayerPage() {
         />
       </div>
 
-      {/* A/B면 토글 */}
-      <div className="flex justify-center gap-2 mb-8">
-        <SideButton
-          label="A면"
-          active={side === "A"}
-          onClick={() => setSide("A")}
-        />
-        <SideButton
-          label="B면"
-          active={side === "B"}
-          onClick={() => setSide("B")}
-        />
+      {/* ── A/B면 토글 + 반복/자동플립 ── */}
+      <div className="flex justify-center items-center gap-6 mb-8 flex-wrap">
+        <div className="flex gap-2">
+          <SideButton
+            label="A면"
+            active={side === "A"}
+            onClick={() => flipToSide("A")}
+          />
+          <SideButton
+            label="B면"
+            active={side === "B"}
+            onClick={() => flipToSide("B")}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          {/* 반복 모드 토글 */}
+          <button
+            onClick={() => setRepeatMode((m) => nextRepeatMode(m))}
+            className="px-3 py-2 rounded-md text-sm border transition-colors"
+            style={{
+              borderColor: "var(--tape-border)",
+              color: repeat.color,
+              backgroundColor: "transparent",
+            }}
+            aria-label={repeat.text}
+            title={repeat.text}
+          >
+            <span className="mr-1">{repeat.icon}</span>
+            <span className="font-mono text-xs">{repeat.text}</span>
+          </button>
+
+          {/* 자동 플립 토글 */}
+          <button
+            onClick={() => setAutoFlip((v) => !v)}
+            className="px-3 py-2 rounded-md text-sm border transition-colors"
+            style={{
+              borderColor: "var(--tape-border)",
+              color: autoFlip
+                ? "var(--tape-accent-amber)"
+                : "var(--tape-text-muted)",
+              backgroundColor: "transparent",
+            }}
+            title="A면이 끝나면 자동으로 B면 재생"
+          >
+            <span className="mr-1">🔄</span>
+            <span className="font-mono text-xs">
+              자동 플립 {autoFlip ? "ON" : "OFF"}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* YouTube IFrame — 화면 밖에 숨김 (오디오만 재생) */}
+      {/* YouTube IFrame — 화면 밖 */}
       <div
         aria-hidden="true"
         style={{
@@ -129,7 +217,7 @@ export default function PlayerPage() {
         <div ref={containerRef} className="w-full h-full" />
       </div>
 
-      {/* 컨트롤 + 트랙 정보 */}
+      {/* ── 컨트롤 패널 ── */}
       {currentTrack ? (
         <div
           className="rounded-lg p-6 border max-w-3xl mx-auto"
@@ -138,8 +226,8 @@ export default function PlayerPage() {
             borderColor: "var(--tape-border)",
           }}
         >
-          <div className="flex items-center gap-6 flex-wrap">
-            {/* 좌측: 트랙 정보 + 재생 컨트롤 */}
+          <div className="flex items-start gap-6 flex-wrap">
+            {/* 좌: 정보 + 진행 바 + 컨트롤 */}
             <div className="flex-1 min-w-[260px]">
               <p
                 className="text-xs font-mono mb-1"
@@ -148,25 +236,50 @@ export default function PlayerPage() {
                 NOW PLAYING · {side}면 · {trackIndex + 1}/{tracks.length}
               </p>
               <p
-                className="font-medium mb-1"
+                className="font-medium mb-3"
                 style={{ color: "var(--tape-text-primary)" }}
               >
                 {currentTrack.title || "(제목 없음)"}
               </p>
-              <p
-                className="text-xs font-mono mb-4"
-                style={{ color: "var(--tape-text-muted)" }}
-              >
-                {formatTime(player.currentTime)} /{" "}
-                {formatTime(player.duration || currentTrack.duration)}
-              </p>
 
+              {/* 진행 바 + 시간 */}
+              <ProgressBar
+                currentTime={player.currentTime}
+                duration={player.duration || currentTrack.duration || 0}
+                onSeek={(t) => player.seekTo(t)}
+              />
+              <div className="flex justify-between mt-2 mb-4">
+                <span
+                  className="text-xs font-mono"
+                  style={{ color: "var(--tape-text-muted)" }}
+                >
+                  {formatTime(player.currentTime)}
+                </span>
+                <span
+                  className="text-xs font-mono"
+                  style={{ color: "var(--tape-text-muted)" }}
+                >
+                  {formatTime(player.duration || currentTrack.duration || 0)}
+                </span>
+              </div>
+
+              {/* 컨트롤 버튼 */}
               <div className="flex items-center gap-2 flex-wrap">
                 <ControlButton
                   onClick={() => setTrackIndex((i) => Math.max(0, i - 1))}
                   disabled={trackIndex === 0}
+                  title="이전 트랙"
                 >
                   ⏮
+                </ControlButton>
+
+                <ControlButton
+                  onClick={() =>
+                    player.seekTo(Math.max(0, player.currentTime - 10))
+                  }
+                  title="10초 뒤로"
+                >
+                  ⏪
                 </ControlButton>
 
                 {player.state === "playing" ? (
@@ -180,17 +293,25 @@ export default function PlayerPage() {
                 )}
 
                 <ControlButton
+                  onClick={() => player.seekTo(player.currentTime + 10)}
+                  title="10초 앞으로"
+                >
+                  ⏩
+                </ControlButton>
+
+                <ControlButton
                   onClick={() =>
                     setTrackIndex((i) => Math.min(tracks.length - 1, i + 1))
                   }
                   disabled={trackIndex >= tracks.length - 1}
+                  title="다음 트랙"
                 >
                   ⏭
                 </ControlButton>
               </div>
             </div>
 
-            {/* 우측: 볼륨 노브 */}
+            {/* 우: 볼륨 노브 */}
             <div className="flex justify-center">
               <VolumeKnob
                 value={player.volume}
@@ -210,7 +331,7 @@ export default function PlayerPage() {
         </p>
       )}
 
-      {/* 트랙 목록 */}
+      {/* ── 트랙 목록 ── */}
       {tracks.length > 0 && (
         <div className="mt-6 max-w-3xl mx-auto">
           <h2
@@ -224,7 +345,7 @@ export default function PlayerPage() {
               <li key={t.id}>
                 <button
                   onClick={() => setTrackIndex(i)}
-                  className="w-full text-left px-3 py-2 rounded text-sm transition-colors"
+                  className="w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center"
                   style={{
                     backgroundColor:
                       i === trackIndex
@@ -242,7 +363,15 @@ export default function PlayerPage() {
                   >
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  {t.title || "(제목 없음)"}
+                  <span className="flex-1">{t.title || "(제목 없음)"}</span>
+                  {t.duration > 0 && (
+                    <span
+                      className="font-mono text-xs ml-3"
+                      style={{ color: "var(--tape-text-muted)" }}
+                    >
+                      {formatTime(t.duration)}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -253,7 +382,9 @@ export default function PlayerPage() {
       <p
         className="mt-8 text-xs font-mono text-center"
         style={{ color: "var(--tape-text-muted)" }}
-      ></p>
+      >
+        // TODO Step 10: 테이프 케이스 커버 디자이너
+      </p>
     </div>
   );
 }
@@ -274,12 +405,13 @@ function SideButton({ label, active, onClick }) {
   );
 }
 
-function ControlButton({ children, onClick, disabled, primary }) {
+function ControlButton({ children, onClick, disabled, primary, title }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="px-4 py-2 rounded-md text-sm font-medium border transition-all hover:opacity-80"
+      title={title}
+      className="px-3 py-2 rounded-md text-sm font-medium border transition-all hover:opacity-80"
       style={{
         backgroundColor: primary ? "var(--tape-accent-blue)" : "transparent",
         color: primary ? "var(--tape-bg-deepest)" : "var(--tape-text-primary)",
@@ -289,12 +421,4 @@ function ControlButton({ children, onClick, disabled, primary }) {
       {children}
     </button>
   );
-}
-
-function formatTime(sec) {
-  if (!sec || isNaN(sec)) return "0:00";
-  const s = Math.floor(sec);
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, "0")}`;
 }
