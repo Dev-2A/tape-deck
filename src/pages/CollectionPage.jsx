@@ -1,183 +1,120 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ROUTES, buildRoute } from "../constants/routes";
+import { useState, useMemo } from "react";
 import { useTapes } from "../hooks/useTapes";
-import { addTape, createBlankTape, deleteTape } from "../db/tapeRepository";
-import { createTrack } from "../db/trackHelpers";
-import CassetteSVG from "../components/tape/CassetteSVG";
-import { useReelRotation } from "../hooks/useReelRotation";
+import { filterTapes, sortTapes } from "../utils/tapeFilters";
+import CollectionToolbar from "../components/shelf/CollectionToolbar";
+import TapeCard from "../components/shelf/TapeCard";
+import Shelf from "../components/shelf/Shelf";
+import EmptyShelf from "../components/shelf/EmptyShelf";
+import NoSearchResults from "../components/shelf/NoSearchResults";
+
+const VIEW_STORAGE_KEY = "tape-deck.collection.view";
+const SORT_STORAGE_KEY = "tape-deck.collection.sort";
 
 export default function CollectionPage() {
-  const tapes = useTapes(); // undefined → loading, [] → empty, [...] → 데이터
+  const tapes = useTapes();
 
-  // 로딩 상태
+  // localStorage에서 마지막 뷰모드/정렬 복원 (사용자 편의)
+  const [view, setView] = useState(() => {
+    try {
+      return localStorage.getItem(VIEW_STORAGE_KEY) || "grid";
+    } catch {
+      return "grid";
+    }
+  });
+  const [sortMode, setSortMode] = useState(() => {
+    try {
+      return localStorage.getItem(SORT_STORAGE_KEY) || "recent";
+    } catch {
+      return "recent";
+    }
+  });
+  const [query, setQuery] = useState("");
+
+  // 변경 시 localStorage에 저장
+  const updateView = (v) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, v);
+    } catch {}
+  };
+  const updateSort = (m) => {
+    setSortMode(m);
+    try {
+      localStorage.setItem(SORT_STORAGE_KEY, m);
+    } catch {}
+  };
+
+  // 필터 + 정렬
+  const visibleTapes = useMemo(() => {
+    if (!tapes) return [];
+    return sortTapes(filterTapes(tapes, query), sortMode);
+  }, [tapes, query, sortMode]);
+
+  // 로딩
   if (tapes === undefined) {
     return (
-      <div className="text-center py-20">
-        <p
-          className="font-mono text-sm"
-          style={{ color: "var(--tape-text-muted)" }}
-        >
-          📼 컬렉션 불러오는 중...
-        </p>
+      <p
+        className="text-center font-mono text-sm py-20"
+        style={{ color: "var(--tape-text-muted)" }}
+      >
+        📼 컬렉션 불러오는 중...
+      </p>
+    );
+  }
+
+  // 컬렉션 자체가 비어있음
+  if (tapes.length === 0) {
+    return (
+      <div>
+        <Header count={0} />
+        <EmptyShelf />
       </div>
     );
   }
 
   return (
     <div>
-      {/* 페이지 헤더 */}
-      <div className="mb-10 flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <h1
-            className="font-serif text-4xl md:text-5xl mb-3"
-            style={{ color: "var(--tape-text-primary)" }}
-          >
-            내 테이프 컬렉션
-          </h1>
-          <p style={{ color: "var(--tape-text-secondary)" }}>
-            {tapes.length === 0
-              ? "만든 테이프가 선반에 꽂힙니다. 한 칸씩 골라 들어보세요."
-              : `선반에 ${tapes.length}개의 테이프.`}
-          </p>
-        </div>
-      </div>
+      <Header count={tapes.length} />
 
-      {/* 빈 상태 */}
-      {tapes.length === 0 ? <EmptyShelf /> : <TapeGrid tapes={tapes} />}
-
-      <p
-        className="mt-8 text-xs font-mono"
-        style={{ color: "var(--tape-text-muted)" }}
-      >
-        // TODO Step 12: 선반 UI 업그레이드 + 검색/정렬
-      </p>
-    </div>
-  );
-}
-
-/**
- * 빈 상태 — 선반에 아무것도 없을 때.
- */
-function EmptyShelf() {
-  return (
-    <div
-      className="rounded-lg border-2 border-dashed py-20 px-6 text-center"
-      style={{
-        borderColor: "var(--tape-border)",
-        backgroundColor: "var(--tape-bg-elevated)",
-      }}
-    >
-      <div className="text-6xl mb-6 opacity-60">🗄️</div>
-      <p
-        className="text-lg mb-2"
-        style={{ color: "var(--tape-text-secondary)" }}
-      >
-        아직 선반이 비어 있어요.
-      </p>
-      <p className="text-sm mb-6" style={{ color: "var(--tape-text-muted)" }}>
-        첫 카세트테이프를 만들어 보세요.
-      </p>
-      <Link
-        to={ROUTES.CREATE}
-        className="inline-block px-6 py-3 rounded-md font-medium transition-opacity hover:opacity-90"
-        style={{
-          backgroundColor: "var(--tape-accent-amber)",
-          color: "var(--tape-bg-deepest)",
-          textDecoration: "none",
-        }}
-      >
-        + 첫 테이프 만들기
-      </Link>
-    </div>
-  );
-}
-
-/**
- * 임시 그리드 — Step 12에서 진짜 미니어처 카세트로 교체.
- */
-function TapeGrid({ tapes }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      {tapes.map((t) => (
-        <TapeCardPlaceholder key={t.id} tape={t} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * 임시 카드 — Step 12에서 진짜 카세트테이프 미니어처로 교체.
- */
-function TapeCardPlaceholder({ tape }) {
-  const totalTracks = (tape.sideA?.length || 0) + (tape.sideB?.length || 0);
-  const [hovered, setHovered] = useState(false);
-  // 호버 중일 때만 천천히 회전 (45 deg/s — 본 재생보다 느림)
-  const reelRotation = useReelRotation(hovered, 45);
-
-  const handleDelete = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (confirm(`"${tape.title}" 테이프를 삭제할까요?`)) {
-      await deleteTape(tape.id);
-    }
-  };
-
-  return (
-    <Link
-      to={buildRoute.play(tape.id)}
-      className="block rounded-xl p-3 transition-all duration-300 ease-out group relative"
-      style={{
-        backgroundColor: "var(--tape-bg-elevated)",
-        textDecoration: "none",
-        transform: hovered
-          ? "translateY(-8px) scale(1.02)"
-          : "translateY(0) scale(1)",
-        boxShadow: hovered
-          ? "0 16px 32px rgba(0, 0, 0, 0.45), 0 4px 8px rgba(0, 0, 0, 0.3)"
-          : "0 2px 6px rgba(0, 0, 0, 0.2)",
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* 미니 카세트 SVG */}
-      <CassetteSVG
-        cover={tape.cover}
-        title={tape.title}
-        artist={tape.artist}
-        side="A"
-        reelRotation={reelRotation}
-        playing={hovered}
+      <CollectionToolbar
+        query={query}
+        onQueryChange={setQuery}
+        sortMode={sortMode}
+        onSortChange={updateSort}
+        view={view}
+        onViewChange={updateView}
+        count={visibleTapes.length}
       />
 
-      {/* 메타 (카세트 아래) */}
-      <div className="flex items-center justify-between mt-3 px-2">
-        <div
-          className="text-xs font-mono"
-          style={{ color: "var(--tape-text-muted)" }}
-        >
-          ♪ {totalTracks} tracks
+      {visibleTapes.length === 0 ? (
+        <NoSearchResults query={query} onClear={() => setQuery("")} />
+      ) : view === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {visibleTapes.map((t) => (
+            <TapeCard key={t.id} tape={t} />
+          ))}
         </div>
-        <div
-          className="text-xs font-mono"
-          style={{ color: "var(--tape-text-muted)" }}
-        >
-          ▶ {tape.playCount || 0}
-        </div>
-      </div>
+      ) : (
+        <Shelf tapes={visibleTapes} />
+      )}
+    </div>
+  );
+}
 
-      {/* 호버 시 우상단 삭제 버튼 */}
-      <button
-        onClick={handleDelete}
-        className="absolute top-3 right-3 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{
-          backgroundColor: "rgba(0,0,0,0.5)",
-          color: "var(--tape-text-primary)",
-          backdropFilter: "blur(4px)",
-        }}
+function Header({ count }) {
+  return (
+    <div className="mb-6">
+      <h1
+        className="font-serif text-4xl md:text-5xl mb-2"
+        style={{ color: "var(--tape-text-primary)" }}
       >
-        삭제
-      </button>
-    </Link>
+        내 테이프 컬렉션
+      </h1>
+      <p style={{ color: "var(--tape-text-secondary)" }}>
+        {count === 0
+          ? "만든 테이프가 선반에 꽂힙니다. 한 칸씩 골라 들어보세요."
+          : `선반에 ${count}개의 테이프.`}
+      </p>
+    </div>
   );
 }
