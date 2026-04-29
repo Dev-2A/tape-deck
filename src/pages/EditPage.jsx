@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ROUTES, buildRoute } from "../constants/routes";
 import { useTape } from "../hooks/useTapes";
 import { updateTape } from "../db/tapeRepository";
+import { useToast } from "../contexts/ToastContext";
 import CassetteSVG from "../components/tape/CassetteSVG";
 import CoverDesigner from "../components/creator/CoverDesigner";
 import TrackListInput from "../components/creator/TrackListInput";
@@ -11,6 +12,7 @@ export default function EditPage() {
   const { tapeId } = useParams();
   const navigate = useNavigate();
   const tape = useTape(tapeId);
+  const toast = useToast();
 
   const [cover, setCover] = useState(null);
   const [title, setTitle] = useState("");
@@ -21,7 +23,6 @@ export default function EditPage() {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // 처음 한 번만 데이터 로드 → 폼 채우기
   useEffect(() => {
     if (tape && !loaded) {
       setCover(tape.cover);
@@ -69,11 +70,11 @@ export default function EditPage() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert("테이프 제목을 입력해주세요.");
+      toast.error("테이프 제목을 입력해주세요.");
       return;
     }
     if (totalTracks === 0) {
-      alert("최소 1곡 이상 필요해요.");
+      toast.error("최소 1곡 이상 필요해요.");
       return;
     }
 
@@ -86,15 +87,15 @@ export default function EditPage() {
         sideA,
         sideB,
       });
+      toast.success("변경사항이 저장됐어요.");
       navigate(buildRoute.play(tapeId));
     } catch (e) {
       console.error(e);
-      alert("저장에 실패했어요.");
+      toast.error("저장에 실패했어요.");
       setSaving(false);
     }
   };
 
-  // 데이터 로드 전엔 빈 화면 (한 프레임 정도)
   if (!cover) return null;
 
   return (

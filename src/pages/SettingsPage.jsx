@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
 import { useTapes } from "../hooks/useTapes";
 import { useFileDownload } from "../hooks/useFileDownload";
+import { useToast } from "../contexts/ToastContext";
+import { useConfirm } from "../hooks/useConfirm";
 import { clearAllTapes } from "../db/tapeRepository";
 import {
   exportTapesToJSON,
@@ -15,90 +17,81 @@ import {
 export default function SettingsPage() {
   const tapes = useTapes();
   const downloadJSON = useFileDownload();
+  const toast = useToast();
+  const { confirm, ConfirmDialog } = useConfirm();
   const fileRef = useRef(null);
 
-  const [importMode, setImportMode] = useState("merge"); // merge | skip
+  const [importMode, setImportMode] = useState("merge");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState(null); // { type: 'success'|'error'|'info', text }
 
-  // ── 내보내기
   const handleExport = async () => {
     setBusy(true);
     try {
       const payload = await exportTapesToJSON();
       const filename = buildBackupFilename();
       downloadJSON(payload, filename);
-      setMessage({
-        type: "success",
-        text: `${payload.count}개의 테이프를 ${filename}로 저장했어요.`,
-      });
+      toast.success(`${payload.count}개의 테이프를 저장했어요.`);
     } catch (e) {
       console.error(e);
-      setMessage({ type: "error", text: "내보내기에 실패했어요." });
+      toast.error("내보내기에 실패했어요.");
     }
     setBusy(false);
   };
 
-  // ── 가져오기
   const handleImportClick = () => fileRef.current?.click();
 
   const handleImportFile = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // 같은 파일 다시 선택 가능하도록
+    e.target.value = "";
     if (!file) return;
 
     setBusy(true);
-    setMessage(null);
     try {
       const payload = await parseBackupFile(file);
       const v = validateBackup(payload);
       if (!v.valid) {
-        setMessage({ type: "error", text: v.error });
+        toast.error(v.error);
         setBusy(false);
         return;
       }
       if (v.warning) {
-        if (!confirm(`${v.warning}\n계속할까요?`)) {
+        const ok = await confirm({
+          title: "버전이 다른 백업이에요",
+          body: `${v.warning}\n계속 진행할까요?`,
+          confirmText: "진행",
+        });
+        if (!ok) {
           setBusy(false);
           return;
         }
       }
       const stats = await importTapesFromPayload(payload, importMode);
-      setMessage({
-        type: "success",
-        text: `가져오기 완료 — 추가 ${stats.added} · 갱신 ${stats.updated} · 건너뜀 ${stats.skipped}`,
-      });
+      toast.success(
+        `가져오기 완료 — 추가 ${stats.added} · 갱신 ${stats.updated} · 건너뜀 ${stats.skipped}`,
+      );
     } catch (err) {
       console.error(err);
-      setMessage({
-        type: "error",
-        text: err.message || "가져오기에 실패했어요.",
-      });
+      toast.error(err.message || "가져오기에 실패했어요.");
     }
     setBusy(false);
   };
 
-  // ── 전체 삭제 (이중 확인)
   const handleClearAll = async () => {
     if (!tapes || tapes.length === 0) return;
-    const c1 = confirm(
-      `정말 모든 테이프(${tapes.length}개)를 삭제할까요?\n\n` +
-        `이 작업은 되돌릴 수 없어요. 백업을 먼저 받는 걸 추천해요.`,
-    );
-    if (!c1) return;
-    const c2 = prompt(
-      '한 번 더 확인할게요. 삭제하려면 "DELETE"를 입력해주세요.',
-    );
-    if (c2 !== "DELETE") {
-      setMessage({ type: "info", text: "삭제를 취소했어요." });
-      return;
-    }
+    const ok = await confirm({
+      title: `모든 테이프(${tapes.length}개)를 삭제할까요?`,
+      body: "이 작업은 되돌릴 수 없어요. 백업을 먼저 받는 걸 추천해요.",
+      confirmText: "삭제 진행",
+      cancelText: "취소",
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await clearAllTapes();
-      setMessage({ type: "success", text: "모든 테이프를 삭제했어요." });
+      toast.success("모든 테이프를 삭제했어요.");
     } catch (e) {
-      setMessage({ type: "error", text: "삭제에 실패했어요." });
+      toast.error("삭제에 실패했어요.");
     }
     setBusy(false);
   };
@@ -125,15 +118,6 @@ export default function SettingsPage() {
         백업하고, 다른 기기로 옮기고, 새로 시작하세요.
       </p>
 
-      {message && (
-        <Banner
-          type={message.type}
-          text={message.text}
-          onClose={() => setMessage(null)}
-        />
-      )}
-
-      {/* ── 내보내기 ── */}
       <Section
         icon="📦"
         title="컬렉션 내보내기"
@@ -156,14 +140,12 @@ export default function SettingsPage() {
         </button>
       </Section>
 
-      {/* ── 가져오기 ── */}
       <Section
         icon="📤"
         title="컬렉션 가져오기"
         desc="이전에 내보낸 JSON 파일에서 테이프를 복원합니다."
       >
         <div className="space-y-4">
-          {/* 충돌 처리 옵션 */}
           <div>
             <p
               className="text-xs font-mono uppercase tracking-wider mb-2"
@@ -211,7 +193,6 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      {/* ── 위험 영역 ── */}
       <Section
         icon="⚠️"
         title="모든 테이프 삭제"
@@ -232,7 +213,6 @@ export default function SettingsPage() {
         </button>
       </Section>
 
-      {/* ── 정보 ── */}
       <Section icon="ℹ️" title="앱 정보">
         <div
           className="space-y-1 font-mono text-xs"
@@ -252,11 +232,11 @@ export default function SettingsPage() {
           </p>
         </div>
       </Section>
+
+      {ConfirmDialog}
     </div>
   );
 }
-
-/* ───────────── 내부 컴포넌트 ───────────── */
 
 function Section({ icon, title, desc, children, danger }) {
   return (
@@ -318,45 +298,5 @@ function ModeOption({ value, current, onChange, label, desc }) {
         {desc}
       </p>
     </button>
-  );
-}
-
-function Banner({ type, text, onClose }) {
-  const colors = {
-    success: {
-      bg: "rgba(138, 154, 107, 0.15)",
-      border: "var(--tape-accent-moss)",
-      fg: "var(--tape-accent-moss)",
-    },
-    error: {
-      bg: "rgba(201, 122, 94, 0.15)",
-      border: "var(--tape-accent-rust)",
-      fg: "var(--tape-accent-rust)",
-    },
-    info: {
-      bg: "rgba(143, 184, 217, 0.15)",
-      border: "var(--tape-accent-blue)",
-      fg: "var(--tape-accent-blue)",
-    },
-  };
-  const c = colors[type] || colors.info;
-
-  return (
-    <div
-      className="rounded-md p-3 mb-6 flex items-start justify-between gap-3 border"
-      style={{ backgroundColor: c.bg, borderColor: c.border }}
-    >
-      <p className="text-sm" style={{ color: c.fg }}>
-        {text}
-      </p>
-      <button
-        onClick={onClose}
-        className="text-xs font-mono px-2 py-1 rounded transition-opacity hover:opacity-70"
-        style={{ color: c.fg }}
-        aria-label="닫기"
-      >
-        ✕
-      </button>
-    </div>
   );
 }

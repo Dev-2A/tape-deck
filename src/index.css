@@ -159,3 +159,54 @@ body {
     animation: none !important;
   }
 }
+
+/* ─────────────────────────────────────────
+ * Page / modal transitions
+ * ───────────────────────────────────────── */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+.fade-up {
+  animation: fade-up 0.3s ease-out;
+}
+
+/* 키보드 포커스 ring — 모든 인터랙티브 요소 공통 */
+*:focus-visible {
+  outline: 2px solid var(--tape-accent-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* range input 스타일 통일 (폴백 슬라이더용) */
+input[type="range"] {
+  accent-color: var(--tape-accent-blue);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .fade-up {
+    animation: none !important;
+  }
+}

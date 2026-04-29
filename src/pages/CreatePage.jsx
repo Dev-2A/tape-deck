@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ROUTES, buildRoute } from "../constants/routes";
+import { useToast } from "../contexts/ToastContext";
 import CassetteSVG from "../components/tape/CassetteSVG";
 import CoverDesigner from "../components/creator/CoverDesigner";
 import TrackListInput from "../components/creator/TrackListInput";
@@ -15,6 +16,7 @@ const DEFAULT_COVER = {
 
 export default function CreatePage() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [cover, setCover] = useState(DEFAULT_COVER);
   const [title, setTitle] = useState("");
@@ -29,11 +31,11 @@ export default function CreatePage() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert("테이프 제목을 입력해주세요.");
+      toast.error("테이프 제목을 입력해주세요.");
       return;
     }
     if (totalTracks === 0) {
-      alert("최소 1곡 이상 추가해주세요.");
+      toast.error("최소 1곡 이상 추가해주세요.");
       return;
     }
 
@@ -47,11 +49,11 @@ export default function CreatePage() {
         sideB,
       });
       await addTape(tape);
-      // 저장 후 바로 재생 페이지로
+      toast.success(`📼 "${tape.title}" 테이프가 저장됐어요!`);
       navigate(buildRoute.play(tape.id));
     } catch (e) {
       console.error(e);
-      alert("저장에 실패했어요. 다시 시도해주세요.");
+      toast.error("저장에 실패했어요. 다시 시도해주세요.");
       setSaving(false);
     }
   };
@@ -79,7 +81,6 @@ export default function CreatePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-10">
-        {/* ── 좌측: 라이브 미리보기 (sticky) ── */}
         <div className="lg:col-span-2">
           <div className="lg:sticky lg:top-24 space-y-4">
             <p
@@ -96,7 +97,6 @@ export default function CreatePage() {
               side={previewSide}
             />
 
-            {/* 미리보기 면 토글 */}
             <div className="flex justify-center gap-2">
               {["A", "B"].map((s) => (
                 <button
@@ -124,7 +124,6 @@ export default function CreatePage() {
               ))}
             </div>
 
-            {/* 저장 버튼 */}
             <button
               type="button"
               onClick={handleSave}
@@ -150,7 +149,6 @@ export default function CreatePage() {
           </div>
         </div>
 
-        {/* ── 우측: 디자이너 + 트랙 입력 ── */}
         <div className="lg:col-span-3 space-y-10">
           <CoverDesigner
             cover={cover}
@@ -163,13 +161,11 @@ export default function CreatePage() {
             }}
           />
 
-          {/* 구분선 */}
           <div
             className="border-t"
             style={{ borderColor: "var(--tape-border)" }}
           />
 
-          {/* 트랙 입력 — A면 / B면 */}
           <div className="space-y-8">
             <h2
               className="font-serif text-2xl"

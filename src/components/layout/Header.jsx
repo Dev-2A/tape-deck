@@ -40,6 +40,7 @@ export default function Header() {
           <NavLink
             to={ROUTES.CREATE}
             label="+ 새 테이프"
+            labelMobile="+"
             active={isCreate}
             highlight
           />
@@ -61,7 +62,7 @@ export default function Header() {
   );
 }
 
-function NavLink({ to, label, active, highlight }) {
+function NavLink({ to, label, labelMobile, active, highlight }) {
   const baseStyle = {
     color: active ? "var(--tape-text-primary)" : "var(--tape-text-secondary)",
     backgroundColor: active ? "var(--tape-bg-elevated)" : "transparent",
@@ -72,10 +73,11 @@ function NavLink({ to, label, active, highlight }) {
   return (
     <Link
       to={to}
-      className="px-4 py-2 rounded-md text-sm font-medium border transition-colors duration-200 hover:opacity-80"
+      className="px-3 sm:px-4 py-2 rounded-md text-sm font-medium border transition-colors duration-200 hover:opacity-80"
       style={baseStyle}
     >
-      {label}
+      <span className={labelMobile ? "hidden sm:inline" : ""}>{label}</span>
+      {labelMobile && <span className="sm:hidden">{labelMobile}</span>}
     </Link>
   );
 }

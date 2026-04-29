@@ -5,6 +5,7 @@ import { useTape } from "../hooks/useTapes";
 import { useYouTubePlayer } from "../hooks/useYouTubePlayer";
 import { useReelRotation } from "../hooks/useReelRotation";
 import { incrementPlayCount } from "../db/tapeRepository";
+import { useToast } from "../contexts/ToastContext";
 import CassetteSVG from "../components/tape/CassetteSVG";
 import VolumeKnob from "../components/tape/VolumeKnob";
 import ProgressBar from "../components/tape/ProgressBar";
@@ -15,27 +16,27 @@ export default function PlayerPage() {
   const { tapeId } = useParams();
   const navigate = useNavigate();
   const tape = useTape(tapeId);
+  const toast = useToast();
 
   const [side, setSide] = useState("A");
   const [trackIndex, setTrackIndex] = useState(0);
-  const [autoFlip, setAutoFlip] = useState(false); // 면 끝 자동 전환
-  const [repeatMode, setRepeatMode] = useState("off"); // off | track | side
-  const [flipping, setFlipping] = useState(false); // 면 전환 애니메이션
+  const [autoFlip, setAutoFlip] = useState(false);
+  const [repeatMode, setRepeatMode] = useState("off");
+  const [flipping, setFlipping] = useState(false);
   const incrementedRef = useRef(false);
+  const lastVolumeRef = useRef(70); // 음소거 토글용
 
   const tracks = tape ? (side === "A" ? tape.sideA : tape.sideB) : [];
   const currentTrack = tracks[trackIndex] || null;
 
   const containerRef = useRef(null);
 
-  // ── 곡이 끝났을 때 다음 동작 결정
   const handleEnded = () => {
     // 1) 한 곡 반복
     if (repeatMode === "track") {
-      // 같은 트랙을 처음부터 다시
       try {
         if (currentTrack?.videoId) {
-          player.loadVideo(currentTrack.videoId, true); // autoplay=true
+          player.loadVideo(currentTrack.videoId, true);
         } else {
           player.seekTo(0);
           player.play();
@@ -48,18 +49,16 @@ export default function PlayerPage() {
       setTrackIndex((i) => i + 1);
       return;
     }
-    // 3) 면 끝 도달
+    // 3) 면 끝
     if (repeatMode === "side") {
-      // 같은 면 처음부터
       setTrackIndex(0);
       return;
     }
     if (autoFlip) {
-      // 자동으로 반대 면으로
       flipToSide(side === "A" ? "B" : "A");
       return;
     }
-    // 4) 정지 (별도 동작 없음)
+    // 4) 정지
   };
 
   const player = useYouTubePlayer(containerRef, {
@@ -87,10 +86,67 @@ export default function PlayerPage() {
   const flipToSide = (newSide) => {
     if (newSide === side) return;
     setFlipping(true);
-    // 애니메이션 절반(약 0.21s) 즈음에 side 변경 → 라벨이 바뀌는 타이밍이 자연스러움
     setTimeout(() => setSide(newSide), 210);
     setTimeout(() => setFlipping(false), 420);
   };
+
+  // ── 키보드 단축키
+  useEffect(() => {
+    const handleKey = (e) => {
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable)
+        return;
+
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          if (player.state === "playing") player.pause();
+          else player.play();
+          break;
+        case "ArrowLeft":
+          if (e.shiftKey) {
+            player.seekTo(Math.max(0, player.currentTime - 10));
+          } else {
+            if (trackIndex > 0) setTrackIndex((i) => i - 1);
+          }
+          break;
+        case "ArrowRight":
+          if (e.shiftKey) {
+            player.seekTo(player.currentTime + 10);
+          } else {
+            if (trackIndex < tracks.length - 1) setTrackIndex((i) => i + 1);
+          }
+          break;
+        case "[":
+          flipToSide("A");
+          break;
+        case "]":
+          flipToSide("B");
+          break;
+        case "m":
+        case "M":
+          if (player.volume > 0) {
+            lastVolumeRef.current = player.volume;
+            player.setVolume(0);
+          } else {
+            player.setVolume(lastVolumeRef.current || 70);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    player.state,
+    player.currentTime,
+    player.volume,
+    trackIndex,
+    tracks.length,
+    side,
+  ]);
 
   // 로딩
   if (tape === undefined) {
@@ -148,7 +204,7 @@ export default function PlayerPage() {
         </Link>
       </div>
 
-      {/* ── 카세트 본체 (애니메이션 가능) ── */}
+      {/* 카세트 본체 */}
       <div
         className={`max-w-3xl mx-auto mb-8 ${flipping ? "tape-flipping" : ""}`}
       >
@@ -162,7 +218,7 @@ export default function PlayerPage() {
         />
       </div>
 
-      {/* ── A/B면 토글 + 반복/자동플립 ── */}
+      {/* A/B면 + 반복/자동플립 */}
       <div className="flex justify-center items-center gap-6 mb-8 flex-wrap">
         <div className="flex gap-2">
           <SideButton
@@ -178,7 +234,6 @@ export default function PlayerPage() {
         </div>
 
         <div className="flex gap-2">
-          {/* 반복 모드 토글 */}
           <button
             onClick={() => setRepeatMode((m) => nextRepeatMode(m))}
             className="px-3 py-2 rounded-md text-sm border transition-colors"
@@ -194,7 +249,6 @@ export default function PlayerPage() {
             <span className="font-mono text-xs">{repeat.text}</span>
           </button>
 
-          {/* 자동 플립 토글 */}
           <button
             onClick={() => setAutoFlip((v) => !v)}
             className="px-3 py-2 rounded-md text-sm border transition-colors"
@@ -230,7 +284,7 @@ export default function PlayerPage() {
         <div ref={containerRef} className="w-full h-full" />
       </div>
 
-      {/* ── 컨트롤 패널 ── */}
+      {/* 컨트롤 패널 */}
       {currentTrack ? (
         <div
           className="rounded-lg p-6 border max-w-3xl mx-auto"
@@ -240,7 +294,6 @@ export default function PlayerPage() {
           }}
         >
           <div className="flex items-start gap-6 flex-wrap">
-            {/* 좌: 정보 + 진행 바 + 컨트롤 */}
             <div className="flex-1 min-w-[260px]">
               <p
                 className="text-xs font-mono mb-1"
@@ -255,7 +308,6 @@ export default function PlayerPage() {
                 {currentTrack.title || "(제목 없음)"}
               </p>
 
-              {/* 진행 바 + 시간 */}
               <ProgressBar
                 currentTime={player.currentTime}
                 duration={player.duration || currentTrack.duration || 0}
@@ -276,7 +328,6 @@ export default function PlayerPage() {
                 </span>
               </div>
 
-              {/* 컨트롤 버튼 */}
               <div className="flex items-center gap-2 flex-wrap">
                 <ControlButton
                   onClick={() => setTrackIndex((i) => Math.max(0, i - 1))}
@@ -324,7 +375,6 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            {/* 우: 볼륨 노브 */}
             <div className="flex justify-center">
               <VolumeKnob
                 value={player.volume}
@@ -344,7 +394,7 @@ export default function PlayerPage() {
         </p>
       )}
 
-      {/* ── 트랙 목록 ── */}
+      {/* 트랙 목록 */}
       {tracks.length > 0 && (
         <div className="mt-6 max-w-3xl mx-auto">
           <h2
@@ -392,13 +442,48 @@ export default function PlayerPage() {
         </div>
       )}
 
-      <p
-        className="mt-8 text-xs font-mono text-center"
+      <KeyboardShortcuts />
+    </div>
+  );
+}
+
+function KeyboardShortcuts() {
+  return (
+    <details className="mt-10 max-w-3xl mx-auto">
+      <summary
+        className="cursor-pointer text-xs font-mono select-none text-center"
         style={{ color: "var(--tape-text-muted)" }}
       >
-        // TODO Step 10: 테이프 케이스 커버 디자이너
-      </p>
-    </div>
+        ⌨️ 키보드 단축키
+      </summary>
+      <div
+        className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs font-mono p-4 rounded-md border"
+        style={{
+          backgroundColor: "var(--tape-bg-elevated)",
+          borderColor: "var(--tape-border)",
+          color: "var(--tape-text-secondary)",
+        }}
+      >
+        <div>
+          <kbd>Space</kbd> — 재생 / 일시정지
+        </div>
+        <div>
+          <kbd>M</kbd> — 음소거 토글
+        </div>
+        <div>
+          <kbd>←</kbd> / <kbd>→</kbd> — 이전 / 다음 트랙
+        </div>
+        <div>
+          <kbd>Shift</kbd>+<kbd>←</kbd>/<kbd>→</kbd> — 10초 시킹
+        </div>
+        <div>
+          <kbd>[</kbd> — A면
+        </div>
+        <div>
+          <kbd>]</kbd> — B면
+        </div>
+      </div>
+    </details>
   );
 }
 
