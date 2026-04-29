@@ -1,14 +1,17 @@
 {
   "name": "tape-deck",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "📼 카세트테이프 UI YouTube 음악 플레이어 — Vibe over utility.",
+  "homepage": "https://dev-2a.github.io/tape-deck/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",
